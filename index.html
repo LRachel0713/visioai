@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>智能绘图 · 图表设计工具库</title>
+    <!-- Mermaid JS -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <!-- PlantUML 编码器 -->
+    <script src="https://cdn.jsdelivr.net/npm/plantuml-encoder@1.4.0/dist/plantuml-encoder.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, 'Roboto', sans-serif;
+            background-color: #ffffff;
+            color: #1e1e1e;
+            line-height: 1.5;
+        }
+
+        /* 整体布局 - 黑白灰极简风格 */
+        .app {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* 侧边栏 (灰白基调) */
+        .sidebar {
+            width: 280px;
+            background-color: #f9f9f9;
+            border-right: 1px solid #e0e0e0;
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
+            overflow-y: auto;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            box-shadow: none;
+        }
+
+        .sidebar-header {
+            padding: 1.8rem 1.5rem 1rem 1.5rem;
+            border-bottom: 1px solid #eaeaea;
+        }
+
+        .sidebar-header h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            letter-spacing: -0.3px;
+            color: #111111;
+            margin-bottom: 0.25rem;
+        }
+
+        .sidebar-header p {
+            font-size: 0.8rem;
+            color: #5c5c5c;
+            margin-top: 0.2rem;
+        }
+
+        /* 搜索框 */
+        .search-box {
+            margin: 1rem 1rem 0.5rem 1rem;
+            position: relative;
+        }
+        .search-box input {
+            width: 100%;
+            padding: 0.6rem 0.8rem 0.6rem 2rem;
+            border: 1px solid #ccc;
+            border-radius: 12px;
+            background-color: white;
+            font-size: 0.85rem;
+            color: #1e1e1e;
+            outline: none;
+            transition: 0.2s;
+        }
+        .search-box input:focus {
+            border-color: #5a5a5a;
+            box-shadow: 0 0 0 2px rgba(0,0,0,0.05);
+        }
+        .search-box::before {
+            content: "🔍";
+            position: absolute;
+            left: 0.7rem;
+            top: 0.55rem;
+            font-size: 0.9rem;
+            color: #7e7e7e;
+            pointer-events: none;
+        }
+        .nav-list-container {
+            flex: 1;
+            padding: 0.5rem 1rem 2rem 1rem;
+        }
+        .nav-list {
+            list-style: none;
+        }
+        .nav-list li {
+            margin-bottom: 0.3rem;
+        }
+        .nav-item {
+            display: block;
+            padding: 0.6rem 1rem;
+            border-radius: 12px;
+            color: #2c2c2c;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+            cursor: pointer;
+            background: transparent;
+            border: none;
+            width: 100%;
+            text-align: left;
+        }
+        .nav-item:hover {
+            background-color: #ebebeb;
+            color: #000000;
+        }
+        .nav-item.active {
+            background-color: #e2e2e2;
+            font-weight: 600;
+            color: #000000;
+            border-left: 3px solid #3a3a3a;
+        }
+        /* 右侧主内容区 */
+        .main-content {
+            flex: 1;
+            margin-left: 280px;
+            padding: 2rem 2rem 3rem 2rem;
+            max-width: calc(100% - 280px);
+            background-color: #ffffff;
+        }
+
+        /* 每个分类页面容器 (独立页面效果) */
+        .page-container {
+            display: none;
+            animation: fade 0.2s ease;
+        }
+        .page-container.active-page {
+            display: block;
+        }
+        @keyframes fade {
+            from { opacity: 0; transform: translateY(6px);}
+            to { opacity: 1; transform: translateY(0);}
+        }
+
+        /* 卡片样式: 黑白灰, 干净边框 */
+        .diagram-card {
+            background: #ffffff;
+            border: 1px solid #eaeef2;
+            border-radius: 24px;
+            margin-bottom: 2rem;
+            padding: 1.5rem 2rem;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+        }
+        .diagram-title {
+            font-size: 1.8rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            letter-spacing: -0.3px;
+            border-left: 4px solid #6c6c6c;
+            padding-left: 1rem;
+            color: #111;
+        }
+        .subheading {
+            font-size: 1.2rem;
+            font-weight: 500;
+            margin: 1.2rem 0 0.6rem 0;
+            color: #2d2d2d;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .prompt-box {
+            background-color: #f7f7f7;
+            border-left: 4px solid #8a8a8a;
+            padding: 0.9rem 1.2rem;
+            border-radius: 16px;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            font-size: 0.85rem;
+            color: #1f1f1f;
+            margin: 0.8rem 0;
+        }
+        .code-block {
+            background: #1e1e1e;
+            color: #e6e6e6;
+            padding: 1rem 1.2rem;
+            border-radius: 18px;
+            overflow-x: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            margin: 1rem 0;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        .preview-container {
+            background: #fefefe;
+            border: 1px solid #e6e6e6;
+            border-radius: 20px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            overflow-x: auto;
+        }
+        .guide-text {
+            background-color: #f4f4f6;
+            padding: 0.8rem 1.2rem;
+            border-radius: 14px;
+            font-size: 0.85rem;
+            color: #2c2c2c;
+            margin-top: 0.8rem;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 2rem;
+            padding-top: 1rem;
+            border-top: 1px solid #ececec;
+            font-size: 0.75rem;
+            color: #6f6f6f;
+        }
+        .badge-gray {
+            background: #e9e9e9;
+            padding: 0.2rem 0.7rem;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            display: inline-block;
+        }
+        @media (max-width: 680px) {
+            .sidebar {
+                transform: translateX(-100%);
+                position: fixed;
+                width: 260px;
+                z-index: 100;
+                transition: 0.2s;
+            }
+            .main-content {
+                margin-left: 0;
+                max-width: 100%;
+                padding: 1rem;
+            }
+            .app {
+                flex-direction: column;
+            }
+        }
+        /* plantuml 图片自适应 */
+        .plantuml-img {
+            max-width: 100%;
+            border-radius: 12px;
+            background: #fafafa;
+            border: 1px solid #ececec;
+        }
+        hr {
+            border-color: #e2e2e2;
+            margin: 0.5rem 0;
+        }
+        button.nav-item {
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+<div class="app">
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <h2>✧ 智能绘图</h2>
+            <p>AI 辅助 · 架构/流程/数据</p>
+        </div>
+        <div class="search-box">
+            <input type="text" id="searchInput" placeholder="搜索图表分类 (如：时序图, ER图)">
+        </div>
+        <div class="nav-list-container">
+            <ul class="nav-list" id="navList">
+                <li data-category="func-struct"><button class="nav-item" data-page="func-struct">🏛️ 功能结构图</button></li>
+                <li data-category="er-diagram"><button class="nav-item" data-page="er-diagram">🗃️ ER图</button></li>
+                <li data-category="usecase"><button class="nav-item" data-page="usecase">🧑‍💻 用例图</button></li>
+                <li data-category="entity-attr"><button class="nav-item" data-page="entity-attr">📦 实体属性图</button></li>
+                <li data-category="class-diagram"><button class="nav-item" data-page="class-diagram">📚 类图</button></li>
+                <li data-category="sequence"><button class="nav-item" data-page="sequence">⏱️ 时序图</button></li>
+                <li data-category="flowchart"><button class="nav-item" data-page="flowchart">🧭 流程图</button></li>
+                <li data-category="arch"><button class="nav-item" data-page="arch">🏗️ 架构图</button></li>
+            </ul>
+        </div>
+        <div style="padding: 1rem; font-size:0.7rem; border-top:1px solid #eaeaea; color:#7c7c7c; margin-top: auto;">
+            ⚡ 黑白灰风格 · 专注设计
+        </div>
+    </aside>
+
+    <main class="main-content" id="mainContent">
+        <!-- 功能结构图页面 -->
+        <div id="func-struct" class="page-container">
+            <div class="diagram-card">
+                <h1 class="diagram-title">🏛️ 功能结构图</h1>
+                <div class="subheading">📝 提示词</div>
+                <div class="prompt-box">帮我画一个外卖平台系统功能结构图，用mermaid格式输出，要求内容为中文，涵盖用户端、商家端、骑手端和管理后台。</div>
+                <div class="subheading">✨ 效果展示</div>
+                <div class="preview-container">
+                    <div class="mermaid" id="mermaid-func-page">
+                        mindmap
+                          root((外卖平台系统))
+                            用户端
+                              首页展示
+                                商家列表
+                                搜索筛选
+                              点餐功能
+                                加入购物车
+                                下单结算
+                              订单管理
+                                待支付
+                                进行中
+                              个人中心
+                                收货地址
+                                优惠券
+                            商家端
+                              店铺管理
+                              商品管理
+                              订单处理
+                              数据统计
+                            骑手端
+                              任务列表
+                              路线导航
+                              订单操作
+                            后台管理端
+                              用户管理
+                              商家审核
+                              平台运营
+                    </div>
+                </div>
+                <div class="subheading">📖 使用指南</div>
+                <div class="guide-text">✅ Mermaid mindmap 语法，展示产品多端功能层次。复制代码到任意支持Mermaid的平台即可渲染，适用于产品规划与需求文档。</div>
+                <div class="code-block">
+                    mindmap<br>
+                      root((外卖平台系统))<br>
+                        用户端<br>
+                          首页展示...<br>
+                    （详见上方预览源码）
+                </div>
+            </div>
+        </div>
+
+        <!-- ER图页面 -->
+        <div id="er-diagram" class="page-container">
+            <div class="diagram-card">
+                <h1 class="diagram-title">🗃️ ER图</h1>
+                <div class="subheading">📝 提示词</div>
+                <div class="prompt-box">帮我画一个原料仓库管理系统ER图，用mermaid代码输出，要求内容为中文，逻辑完整无断裂，包含原料、仓库、供应商、入库单、出库单、库存台账。</div>
+                <div class="subheading">✨ 效果展示</div>
+                <div class="preview-container">
+                    <div class="mermaid" id="mermaid-er-page">
+                        erDiagram
+                            原料 { string 原料编码 PK string 原料名称 string 规格型号 string 单位 }
+                            仓库 { string 仓库编码 PK string 仓库名称 string 位置 }
+                            供应商 { string 供应商编码 PK string 供应商名称 string 联系人 }
+                            入库单 { string 入库单号 PK datetime 入库日期 string 原料编码 FK decimal 入库数量 }
+                            出库单 { string 出库单号 PK datetime 出库日期 string 原料编码 FK decimal 出库数量 }
+                            库存台账 { string 原料编码 FK string 仓库编码 FK decimal 当前库存 }
+                            供应商 ||--o{ 入库单 : 提供
+                            原料 ||--o{ 库存台账 : 记录
+                            仓库 ||--o{ 库存台账 : 存放
+                    </div>
+                </div>
+                <div class="subheading">📖 使用指南</div>
+                <div class="guide-text">📌 实体关系图描述数据库核心表及关联，可导出为数据库设计文档。本图保证仓库-原料-台账闭环。</div>
+            </div>
+        </div>
+
+        <!-- 用例图 (PlantUML) 页面 -->
+        <div id="usecase" class="page-container">
+            <div class="diagram-card">
+                <h1 class="diagram-title">🧑‍💻 用例图</h1>
+                <div class="subheading">📝 提示词</div>
+                <div class="prompt-box">帮我画一个会员报名系统用例图，以会员为参与者，使用PlantUML代码输出，内容为中文。</div>
+                <div class="subheading">✨ 效果展示</div>
+                <div class="preview-container" id="usecase-preview">
+                    <img id="usecaseImg" class="plantuml-img" alt="用例图渲染" style="max-width:100%">
+                </div>
+                <div class="subheading">📖 使用指南</div>
+                <div class="guide-text">🔧 PlantUML 用例图，展示参与者与系统边界。图片通过 PlantUML 在线服务实时生成，也可复制源码本地渲染。</div>
+                <div class="code-block" id="usecaseCodeBlock"></div>
+            </div>
+        </div>
+
+        <!-- 实体属性图页面 -->
+        <div id="entity-attr" class="page-container">
+            <div class="diagram-card">
+                <h1 class="diagram-title">📦 实体属性图</h1>
+                <div class="subheading">📝 提示词</div>
+                <div class="prompt-box">绘制原料实体属性图，包括原料编码、名称、类别、单位、安全库存等，采用类图风格，Mermaid代码，中文。</div>
+                <div class="subheading">✨ 效果展示</div>
+                <div class="preview-container">
+                    <div class="mermaid">
+                        classDiagram
+                            class 原料实体 {
+                                + 原料编码: string PK
+                                + 原料名称: string
+                                + 规格型号: string
+                                + 单位: string
+                                + 原料类别: string
+                                + 安全库存阈值: decimal
+                            }
+                            class 库存台账 {
+                                + 当前库存: decimal
+                                + 预警值: decimal
+                            }
+                            原料实体 "1" --> "*" 库存台账 : 拥有
+                    </div>
+                </div>
+                <div class="guide-text">🎯 实体属性图聚焦于业务实体字段定义，可用于数据库概念模型或领域模型说明。</div>
+            </div>
+        </div>
+
+        <!-- 类图页面 -->
+        <div id="class-diagram" class="page-container">
+            <div class="diagram-card">
+                <h1 class="diagram-title">📚 类图</h1>
+                <div class="subheading">📝 提示词</div>
+                <div class="prompt-box">设计外卖订单系统核心类图，包含用户、订单、订单项、商品、支付信息，展示关系，Mermaid中文类名。</div>
+                <div class="subheading">✨ 效果展示</div>
+                <div class="preview-container">
+                    <div class="mermaid">
+                        classDiagram
+                            class 用户 {
+                                +用户ID
+                                +手机号
+                            }
+                            class 订单 {
+                                +订单号
+                                +总金额
+                                +状态
+                            }
+                            class 订单项 {
+                                +数量
+                                +单价
+                            }
+                            class 商品 {
+                                +商品ID
+                                +价格
+                            }
+                            用户 "1" -- "0..*" 订单
+                            订单 "1" -- "1..*" 订单项
+                            商品 "1" -- "*" 订单项
+                    </div>
+                </div>
+                <div class="guide-text">📌 类图展示面向对象设计核心结构，帮助开发团队理解领域模型及关联。</div>
+            </div>
+        </div>
+
+        <!-- 时序图页面 -->
+        <div id="sequence" class="page-container">
+            <div class="diagram-card">
+                <h1 class="diagram-title">⏱️ 时序图</h1>
+                <div class="subheading">📝 提示词</div>
+                <div class="prompt-box">用户下单商品时序图，包含用户、前端、订单服务、库存服务、支付服务，库存不足分支，Mermaid中文。</div>
+                <div class="subheading">✨ 效果展示</div>
+                <div class="preview-container">
+                    <div class="mermaid">
+                        sequenceDiagram
+                            participant 用户
+                            participant 前端
+                            participant 订单服务
+                            participant 库存服务
+                            用户->>前端: 提交订单
+                            前端->>订单服务: 创建订单
+                            订单服务->>库存服务: 锁定库存
+                            alt 库存充足
+                                库存服务-->>订单服务: 成功
+                                订单服务-->>前端: 下单成功
+                            else 库存不足
+                                库存服务-->>订单服务: 不足
+                                订单服务-->>前端: 失败
+                            end
+                    </div>
+                </div>
+                <div class="guide-text">⚡ 时序图清晰表达交互顺序，用于API设计或业务逻辑说明。</div>
+            </div>
+        </div>
+
+        <!-- 流程图页面 -->
+        <div id="flowchart" class="page-container">
+            <div class="diagram-card">
+                <h1 class="diagram-title">🧭 流程图</h1>
+                <div class="subheading">📝 提示词</div>
+                <div class="prompt-box">外卖骑手接单到完成配送业务流程图，包含接单、取餐、配送、送达决策节点，Mermaid flowchart中文。</div>
+                <div class="subheading">✨ 效果展示</div>
+                <div class="preview-container">
+                    <div class="mermaid">
+                        flowchart TD
+                            Start([收到派单]) --> Choice{是否接单}
+                            Choice -- 拒绝 --> End1([结束])
+                            Choice -- 接受 --> Take[前往商家取餐]
+                            Take --> Deliver[配送中]
+                            Deliver --> Confirm[确认送达]
+                            Confirm --> Complete[完成]
+                    </div>
+                </div>
+                <div class="guide-text">📋 业务流程图展示操作步骤与判断分支，可用于SOP文档。</div>
+            </div>
+        </div>
+
+        <!-- 架构图页面 -->
+        <div id="arch" class="page-container">
+            <div class="diagram-card">
+                <h1 class="diagram-title">🏗️ 架构图</h1>
+                <div class="subheading">📝 提示词</div>
+                <div class="prompt-box">外卖平台微服务架构图，包含客户端、网关、业务服务、中间件和基础设施，Mermaid分层架构，中文。</div>
+                <div class="subheading">✨ 效果展示</div>
+                <div class="preview-container">
+                    <div class="mermaid">
+                        graph TB
+                            subgraph 客户端层
+                                A[App/Web]
+                            end
+                            subgraph 接入层
+                                B[API网关]
+                            end
+                            subgraph 服务层
+                                C1[订单服务]
+                                C2[用户服务]
+                            end
+                            subgraph 中间件
+                                D1[(MySQL)]
+                                D2[Redis]
+                            end
+                            A --> B --> C1
+                            C1 --> D1
+                    </div>
+                </div>
+                <div class="guide-text">🏭 架构图描述系统层次及组件依赖，帮助技术决策与部署规划。</div>
+            </div>
+        </div>
+        <div class="footer">© 智能绘图 · 所有图表均可复用 | 支持 Mermaid / PlantUML 实时渲染</div>
+    </main>
+</div>
+
+<script>
+    // 初始化Mermaid全局配置
+    mermaid.initialize({ startOnLoad: true, theme: 'base', themeVariables: { background: '#ffffff', primaryColor: '#3a3a3a', lineColor: '#333333' }, securityLevel: 'loose' });
+    
+    // 页面切换逻辑 + 搜索过滤
+    let currentPageId = "func-struct";
+    const pages = document.querySelectorAll('.page-container');
+    const navButtons = document.querySelectorAll('.nav-item');
+    
+    function showPage(pageId) {
+        pages.forEach(page => {
+            page.classList.remove('active-page');
+            if (page.id === pageId) {
+                page.classList.add('active-page');
+                currentPageId = pageId;
+            }
+        });
+        // 更新导航高亮
+        navButtons.forEach(btn => {
+            const target = btn.getAttribute('data-page');
+            if (target === pageId) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
+        // 重新渲染当前页面的 Mermaid（确保图形正常）
+        setTimeout(() => {
+            const activeContainer = document.getElementById(pageId);
+            if(activeContainer) {
+                const mermaidDivs = activeContainer.querySelectorAll('.mermaid');
+                if(mermaidDivs.length) {
+                    mermaid.contentLoaded();
+                }
+            }
+        }, 100);
+    }
+    
+    // 绑定导航点击事件
+    navButtons.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const pageId = btn.getAttribute('data-page');
+            if(pageId) showPage(pageId);
+        });
+    });
+    
+    // 搜索框过滤左侧导航分类 (基于分类名称关键词)
+    const searchInput = document.getElementById('searchInput');
+    const navListItems = document.querySelectorAll('#navList li');
+    function filterNav() {
+        const keyword = searchInput.value.trim().toLowerCase();
+        navListItems.forEach(item => {
+            const button = item.querySelector('.nav-item');
+            const text = button.innerText.toLowerCase();
+            if (keyword === '' || text.includes(keyword)) {
+                item.style.display = '';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+    }
+    searchInput.addEventListener('input', filterNav);
+    
+    // 用例图 单独处理 plantuml 渲染
+    const plantUmlRaw = `@startuml
+left to right direction
+actor "会员" as Member
+rectangle "会员报名系统" {
+  usecase "注册账号" as UC1
+  usecase "登录系统" as UC2
+  usecase "浏览活动列表" as UC3
+  usecase "报名活动" as UC4
+  usecase "取消报名" as UC5
+  usecase "查看报名记录" as UC6
+}
+Member --> UC1
+Member --> UC2
+Member --> UC3
+Member --> UC4
+Member --> UC5
+Member --> UC6
+UC4 ..> UC6 : <<include>>
+@enduml`;
+
+    const codeBlock = document.getElementById('usecaseCodeBlock');
+    if(codeBlock) codeBlock.innerText = plantUmlRaw;
+    const imgElement = document.getElementById('usecaseImg');
+    if(imgElement && typeof plantumlEncoder !== 'undefined') {
+        const encoded = plantumlEncoder.encode(plantUmlRaw);
+        imgElement.src = `https://www.plantuml.com/plantuml/png/${encoded}`;
+        imgElement.alt = "用例图";
+    } else {
+        if(imgElement) imgElement.outerHTML = '<div class="guide-text">⚠️ 需要网络加载PlantUML，可复制代码块到 https://www.plantuml.com/plantuml/uml/ 查看</div>';
+    }
+    
+    // 针对所有 mermaid 内容手动重绘 (避免重复冲突)
+    setTimeout(() => {
+        mermaid.contentLoaded();
+        // 强制渲染当前激活页面
+        const activeId = currentPageId;
+        showPage(activeId);
+    }, 150);
+    
+    // 默认展示功能结构图页面
+    showPage('func-struct');
+    
+    // 支持浏览器hash导航 (可选)
+    function handleHash() {
+        const hash = window.location.hash.substring(1);
+        if(hash && document.getElementById(hash)) {
+            showPage(hash);
+        }
+    }
+    window.addEventListener('hashchange', handleHash);
+    if(window.location.hash) handleHash();
+</script>
+</body>
+</html>
